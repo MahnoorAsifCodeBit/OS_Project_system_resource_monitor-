@@ -1,0 +1,205 @@
+import tkinter as tk
+from tkinter import ttk
+from tkinter import StringVar
+import winsound
+from psutil import virtual_memory, cpu_percent, disk_usage, net_io_counters, sensors_battery, boot_time
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import platform
+import time
+from collections import deque
+
+
+class SystemMonitor:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("System Monitor")
+        self.root.geometry("800x900")
+
+        # Set the background color of the root window
+
+        # Create a notebook (tabbed interface) to switch between screens
+        self.notebook = ttk.Notebook(root, style="TNotebook")
+        self.notebook.pack(expand=1, fill="both")
+
+        # Configure style for the tabs
+       # Set the background color of the notebook
+
+
+
+       # Configure style for the tabs
+        style = ttk.Style()
+        style.configure("TNotebook.Tab", font=('Helvetica', 16, 'bold'), padding=(15, 5), foreground='black')
+
+        # Set the background color of the notebook
+        style.configure("TNotebook.Tab", background="orange")
+
+
+        # Create a notebook (tabbed interface) to switch between screens
+        self.notebook = ttk.Notebook(root, style="TNotebook")
+        self.notebook.pack(expand=2, fill="both")
+
+
+        style.configure("TFrame", background="black")  # Set the background color of the frames
+
+
+
+
+
+  
+
+            # Screen 1: CPU Usage
+        self.cpu_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.cpu_frame, text="CPU Usage")
+        self.cpu_figure = Figure(figsize=(8, 8), dpi=100)
+        self.cpu_subplot = self.cpu_figure.add_subplot(111)
+        self.cpu_canvas = FigureCanvasTkAgg(self.cpu_figure, master=self.cpu_frame)
+        self.cpu_canvas.get_tk_widget().pack()
+        self.cpu_figure.set_facecolor('#EC7063')
+        
+        # Screen 2: Memory Usage
+        self.memory_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.memory_frame, text="Memory Usage")
+        self.memory_figure = Figure(figsize=(8, 8), dpi=100)
+        self.memory_subplot = self.memory_figure.add_subplot(111)
+        self.memory_canvas = FigureCanvasTkAgg(self.memory_figure, master=self.memory_frame)
+        self.memory_canvas.get_tk_widget().pack()
+        self.memory_figure.set_facecolor('#CBC3E3')
+
+
+        # Screen 3: Disk Usage
+        self.disk_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.disk_frame, text="Disk Usage")
+        self.disk_figure = Figure(figsize=(8, 8), dpi=100)
+        self.disk_subplot = self.disk_figure.add_subplot(111)
+        self.disk_canvas = FigureCanvasTkAgg(self.disk_figure, master=self.disk_frame)
+        self.disk_canvas.get_tk_widget().pack()
+        self.disk_figure.set_facecolor('pink')
+
+        # Screen 4: Network Usage
+        self.network_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.network_frame, text="Network Usage")
+        self.network_figure = Figure(figsize=(8, 8), dpi=100)
+        self.network_subplot = self.network_figure.add_subplot(111)
+        self.network_canvas = FigureCanvasTkAgg(self.network_figure, master=self.network_frame)
+        self.network_canvas.get_tk_widget().pack()
+        self.network_figure.set_facecolor('#21B9B9')
+
+        # Screen 5: Battery Usage
+        self.battery_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.battery_frame, text="Battery Usage")
+        self.battery_container = ttk.Frame(self.battery_frame, borderwidth=5, relief="solid", padding=(20, 30))
+        self.battery_container.place(relx=0.5, rely=0.5, anchor=tk.CENTER)  # Center the frame
+        self.battery_container.pack(pady=10)
+        self.battery_label = tk.Label(self.battery_container, text="Battery Status:", font=('Arial', 22, 'bold'),bg='#FFFFED', padx=5, pady=5)
+        self.battery_label.pack(pady =15)
+        self.battery_status = StringVar()
+        self.battery_status_label = tk.Label(self.battery_container,textvariable=self.battery_status,font=('Arial', 24, 'bold'),bg="green", padx=5, pady=5)
+        self.battery_status_label.pack()
+        
+ 
+        # Screen 6: System Uptime
+        self.uptime_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.uptime_frame, text="System Uptime")
+        self.uptime_container = ttk.Frame(self.uptime_frame, borderwidth=5, relief="solid", padding=(20, 30))
+        self.uptime_container.place(relx=0.5, rely=0.5, anchor=tk.CENTER)  # Center the frame
+        self.uptime_container.pack(pady=10)
+        self.uptime_label = tk.Label(self.uptime_container, text="System Uptime:",font=('Arial', 22, 'bold'),bg="blue", padx=5, pady=5)
+        self.uptime_label.pack(pady = 15)
+        self.uptime = StringVar()
+        self.uptime_label_value = tk.Label(self.uptime_container, textvariable=self.uptime, font=('Arial', 24, 'bold'),bg="blue", padx=5, pady=5)
+        self.uptime_label_value.pack()
+
+
+        # Declare instance variables
+        self.cpu_percent = 0
+        self.memory_percent = 0
+        self.disk_percent = 0
+        self.sent_bytes = 0
+        self.received_bytes = 0
+        self.percent = 0
+        self.power_plugged = ""
+        self.uptime_hours = 0
+
+        
+
+        # Update the screens
+        self.update_cpu_screen()
+        self.update_memory_screen()
+        self.update_disk_screen()
+        self.update_network_screen()
+        self.update_battery_screen()
+        self.update_uptime_screen()
+
+    
+
+    def update_cpu_screen(self):
+        # Get CPU usage
+        self.cpu_percent = cpu_percent(interval=1)
+        self.cpu_subplot.clear()
+        self.cpu_subplot.set_title('CPU Usage (%)')
+        self.cpu_subplot.pie([self.cpu_percent, 100 - self.cpu_percent], labels=['Used', 'Unused'], autopct='%1.1f%%', colors=['#70D9DB', 'lightgray'])
+        self.cpu_canvas.draw()
+        self.root.after(1000, self.update_cpu_screen)  # Update every second
+
+    def update_memory_screen(self):
+        # Get memory usage
+        memory = virtual_memory()
+        self.memory_percent = memory.percent
+        self.memory_subplot.clear()
+        self.memory_subplot.set_title('Memory Usage (%)')
+        self.memory_subplot.pie([self.memory_percent, 100 - self.memory_percent], labels=['Used', 'Free'], autopct='%1.1f%%', colors=['purple', 'lightgray'])
+        self.memory_canvas.draw()
+        self.root.after(1000, self.update_memory_screen)  # Update every second
+
+    def update_disk_screen(self):
+        # Get disk usage
+        disk = disk_usage('/')
+        self.disk_percent = disk.percent
+        self.disk_subplot.clear()
+        self.disk_subplot.set_title('Disk Usage (%)')
+        self.disk_subplot.pie([self.disk_percent, 100 - self.disk_percent], labels=['Used', 'Free'], autopct='%1.1f%%', colors=['#DE3163', '#5D6D7E'])
+        self.disk_canvas.draw()
+        self.root.after(1000, self.update_disk_screen)  # Update every second
+
+    def update_network_screen(self):
+        # Get network activity
+        net_io = net_io_counters()
+        sent_bytes = net_io.bytes_sent
+        received_bytes = net_io.bytes_recv
+        self.sent_bytes = sent_bytes
+        self.received_bytes = received_bytes
+        self.network_subplot.clear()
+        self.network_subplot.set_title('Network Activity')
+        self.network_subplot.pie([self.sent_bytes, self.received_bytes], labels=['Sent', 'Received'], autopct='%1.1f%%', colors=['purple', 'pink'])
+        self.network_canvas.draw()
+        self.root.after(1000, self.update_network_screen)  # Update every second
+
+    def update_battery_screen(self):
+        # Get battery status
+        battery = sensors_battery()
+        if battery:
+            self.percent = battery.percent
+            self.power_plugged = "Plugged In" if battery.power_plugged else "Not Plugged In"
+            self.battery_status.set(f"Battery: {self.percent}% ({self.power_plugged})")
+            #alarm prodcued
+            # Check if battery percentage is below 50%
+        if self.percent < 50:
+                # Play multiple alarm sounds with a delay of 1 second
+                for _ in range(3):  # Adjust the range to control the number of beeps
+                    winsound.Beep(1000, 200)  # You can adjust the frequency (1000) and duration (200) as needed
+                    time.sleep(1)  # 1-second delay between beeps    
+        else:
+            self.battery_status.set("Battery status not available")
+            self.root.after(60000, self.update_battery_screen)  # Update every minute
+
+    def update_uptime_screen(self):
+        # Get system uptime
+        uptime_seconds = time.time() - boot_time()
+        self.uptime_minutes = uptime_seconds / 60  # Calculate uptime in minutes
+        self.uptime.set(f"System Uptime: {int(self.uptime_minutes)} minutes")     
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    monitor = SystemMonitor(root)
+    root.mainloop()
